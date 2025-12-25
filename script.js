@@ -14,8 +14,8 @@ async function setupCamera() {
 	const stream = await navigator.mediaDevices.getUserMedia({
 		video: {
 			facingMode: { ideal: "environment" }, // kamera belakang HP
-			width: { ideal: 640 },
-			height: { ideal: 480 },
+			width: { ideal: 1280 },
+			height: { ideal: 720 },
 		},
 		audio: false,
 	});
@@ -51,7 +51,7 @@ function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	predictions.forEach((pred) => {
-		if (pred.score > 0.6) {
+		if (pred.score > (canvas.width > 500 ? 0.4 : 0.6)) {
 			const [x, y, width, height] = pred.bbox;
 
 			ctx.strokeStyle = "lime";
