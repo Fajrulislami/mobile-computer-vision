@@ -4,6 +4,8 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const stableObjects = {};
+
 
 let model = null;
 let modelReady = false;
@@ -16,8 +18,8 @@ async function setupCamera() {
 	const stream = await navigator.mediaDevices.getUserMedia({
 		video: {
 			facingMode: { ideal: "environment" },
-			width: { ideal: 1280 },
-			height: { ideal: 720 },
+			width: { ideal: 640  },
+			height: { ideal: 480 },
 		},
 		audio: false,
 	});
@@ -67,10 +69,16 @@ function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	predictions.forEach((pred) => {
-		if (pred.score < 0.5) return;
+		if (pred.score < 0.4) return;
 
 		const category = getCategory(pred.class);
 		if (!category) return;
+
+		const key = `${pred.class}-${Math.round(pred.bbox[0] / 50)}`;
+
+		stableObjects[key] = (stableObjects[key] || 0) + 1;
+
+		if (stableObjects[key] < 2) return;
 
 		const [x, y, width, height] = pred.bbox;
 		const color = getColor(category);
