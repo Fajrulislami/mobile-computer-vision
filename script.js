@@ -1,4 +1,6 @@
-// Ambil elemen
+// ============================
+// AMBIL ELEMEN
+// ============================
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -8,12 +10,12 @@ let modelReady = false;
 let detecting = false;
 
 // ============================
-// 1. AKSES KAMERA (AMAN MOBILE & LAPTOP)
+// 1. AKSES KAMERA (MOBILE + LAPTOP)
 // ============================
 async function setupCamera() {
 	const stream = await navigator.mediaDevices.getUserMedia({
 		video: {
-			facingMode: { ideal: "environment" }, // kamera belakang HP
+			facingMode: { ideal: "environment" },
 			width: { ideal: 1280 },
 			height: { ideal: 720 },
 		},
@@ -25,52 +27,70 @@ async function setupCamera() {
 	return new Promise((resolve) => {
 		video.onloadedmetadata = () => {
 			video.play();
-
-			// Samakan ukuran canvas dengan video
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
-
 			resolve();
 		};
 	});
 }
 
 // ============================
-// 2. LOAD MODEL AI
+// 2. LOAD MODEL COCO-SSD
 // ============================
 async function loadModel() {
 	model = await cocoSsd.load();
 	modelReady = true;
-	console.log("✅ Model siap");
+	console.log("✅ Model COCO-SSD siap");
 }
 
 // ============================
-// 3. GAMBAR KOTAK (STABIL)
+// 3. KATEGORI OBJEK
+// ============================
+function getCategory(className) {
+	if (className === "person") return "ORANG";
+	if (className === "bottle") return "BOTOL";
+	if (className === "motorcycle") return "MOTOR";
+	return null;
+}
+
+function getColor(category) {
+	if (category === "ORANG") return "lime";
+	if (category === "BOTOL") return "cyan";
+	if (category === "MOTOR") return "orange";
+	return "white";
+}
+
+// ============================
+// 4. GAMBAR KOTAK (STABIL)
 // ============================
 function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	predictions.forEach((pred) => {
-		if (pred.score > (canvas.width > 500 ? 0.4 : 0.6)) {
-			const [x, y, width, height] = pred.bbox;
+		if (pred.score < 0.5) return;
 
-			ctx.strokeStyle = "lime";
-			ctx.lineWidth = 3;
-			ctx.strokeRect(x, y, width, height);
+		const category = getCategory(pred.class);
+		if (!category) return;
 
-			ctx.fillStyle = "lime";
-			ctx.font = "16px Arial";
-			ctx.fillText(
-				`${pred.class} (${Math.round(pred.score * 100)}%)`,
-				x,
-				y > 20 ? y - 5 : y + 20
-			);
-		}
+		const [x, y, width, height] = pred.bbox;
+		const color = getColor(category);
+
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 3;
+		ctx.strokeRect(x, y, width, height);
+
+		ctx.fillStyle = color;
+		ctx.font = "16px Arial";
+		ctx.fillText(
+			`${category} (${Math.round(pred.score * 100)}%)`,
+			x,
+			y > 20 ? y - 5 : y + 20
+		);
 	});
 }
 
 // ============================
-// 4. DETEKSI REAL-TIME (FPS DIBATASI)
+// 5. DETEKSI REAL-TIME (FPS STABIL)
 // ============================
 async function detectFrame() {
 	if (!modelReady || detecting) {
@@ -79,18 +99,15 @@ async function detectFrame() {
 	}
 
 	detecting = true;
-
 	const predictions = await model.detect(video);
 	drawBoxes(predictions);
-
 	detecting = false;
 
-	// Batasi FPS supaya stabil (≈5 FPS)
-	setTimeout(detectFrame, 200);
+	setTimeout(detectFrame, 200); // ±5 FPS
 }
 
 // ============================
-// 5. START SEMUA (URUT & AMAN)
+// 6. START SEMUA
 // ============================
 async function start() {
 	try {
@@ -98,10 +115,9 @@ async function start() {
 		await loadModel();
 		detectFrame();
 	} catch (err) {
-		alert("Kamera tidak bisa diakses. Pastikan HTTPS & izin kamera aktif.");
+		alert("❌ Kamera tidak bisa diakses. Pastikan HTTPS & izin kamera aktif.");
 		console.error(err);
 	}
 }
 
-// Jalankan
 start();
