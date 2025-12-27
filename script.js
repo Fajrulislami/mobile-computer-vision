@@ -5,8 +5,6 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const stableObjects = {};
-
-
 let model = null;
 let modelReady = false;
 let detecting = false;
@@ -18,7 +16,7 @@ async function setupCamera() {
 	const stream = await navigator.mediaDevices.getUserMedia({
 		video: {
 			facingMode: { ideal: "environment" },
-			width: { ideal: 640  },
+			width: { ideal: 640 },
 			height: { ideal: 480 },
 		},
 		audio: false,
@@ -40,7 +38,9 @@ async function setupCamera() {
 // 2. LOAD MODEL COCO-SSD
 // ============================
 async function loadModel() {
-	model = await cocoSsd.load();
+	model = await cocoSsd.load({
+		base: "lite_mobilenet_v2"
+	});
 	modelReady = true;
 	console.log("✅ Model COCO-SSD siap");
 }
@@ -68,8 +68,12 @@ function getColor(category) {
 function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+	const seenKeys = new Set();
+
 	predictions.forEach((pred) => {
 		if (pred.score < 0.4) return;
+
+		if (width < 40 || height < 40) return;
 
 		const category = getCategory(pred.class);
 		if (!category) return;
@@ -95,6 +99,12 @@ function drawBoxes(predictions) {
 			y > 20 ? y - 5 : y + 20
 		);
 	});
+
+	for (const key in stableObjects) {
+		if (!seenKeys.has(key)) {
+			delete stableObjects[key];
+		}
+	}
 }
 
 // ============================
@@ -102,7 +112,7 @@ function drawBoxes(predictions) {
 // ============================
 async function detectFrame() {
 	if (!modelReady || detecting) {
-		setTimeout(detectFrame, 200);
+		setTimeout(detectFrame, 100);
 		return;
 	}
 
@@ -111,7 +121,7 @@ async function detectFrame() {
 	drawBoxes(predictions);
 	detecting = false;
 
-	setTimeout(detectFrame, 200); // ±5 FPS
+	setTimeout(detectFrame, 100); // ±5 FPS
 }
 
 // ============================
