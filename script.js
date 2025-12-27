@@ -62,10 +62,10 @@ function drawBoxes(predictions) {
 
 async function detectFrame() {
 	if (modelReady && video.readyState === 4) {
+		// Panggil detect hanya dengan satu argumen yaitu 'video'
 		const predictions = await model.detect(video);
 		drawBoxes(predictions);
 	}
-	// Gunakan requestAnimationFrame agar lebih sinkron dengan layar
 	requestAnimationFrame(detectFrame);
 }
 
