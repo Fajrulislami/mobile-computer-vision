@@ -70,7 +70,7 @@ function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	predictions.forEach((pred) => {
-		if (pred.score < 0.25) return;
+		if (pred.score < 0.5) return;
 
 		const category = getCategory(pred.class);
 		if (!category) return;
