@@ -4,13 +4,13 @@
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const stableObjects = {};
+
 let model = null;
 let modelReady = false;
 let detecting = false;
 
 // ============================
-// 1. AKSES KAMERA (MOBILE + LAPTOP)
+// 1. AKSES KAMERA
 // ============================
 async function setupCamera() {
 	const stream = await navigator.mediaDevices.getUserMedia({
@@ -29,6 +29,7 @@ async function setupCamera() {
 			video.play();
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
+			console.log("📷 Kamera siap:", canvas.width, canvas.height);
 			resolve();
 		};
 	});
@@ -39,14 +40,14 @@ async function setupCamera() {
 // ============================
 async function loadModel() {
 	model = await cocoSsd.load({
-		base: "lite_mobilenet_v2"
+		base: "lite_mobilenet_v2",
 	});
 	modelReady = true;
-	console.log("✅ Model COCO-SSD siap");
+	console.log("🤖 Model COCO-SSD siap");
 }
 
 // ============================
-// 3. KATEGORI OBJEK
+// 3. KATEGORI & WARNA
 // ============================
 function getCategory(className) {
 	if (className === "person") return "ORANG";
@@ -63,30 +64,19 @@ function getColor(category) {
 }
 
 // ============================
-// 4. GAMBAR KOTAK (STABIL)
+// 4. GAMBAR BOUNDING BOX
 // ============================
 function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 	predictions.forEach((pred) => {
-		if (pred.score < 0.4) return;
+		if (pred.score < 0.25) return;
 
 		const category = getCategory(pred.class);
 		if (!category) return;
 
 		const [x, y, width, height] = pred.bbox;
-
-		// filter objek terlalu kecil
-		if (width < 40 || height < 40) return;
-
-		// 🔑 KEY LEBIH STABIL (gabung class + area)
-		const areaKey = Math.round((width * height) / 10000);
-		const key = `${pred.class}-${areaKey}`;
-
-		stableObjects[key] = (stableObjects[key] || 0) + 1;
-
-		// cukup 1 frame saja (jangan terlalu ketat)
-		if (stableObjects[key] < 1) return;
+		if (width < 20 || height < 20) return;
 
 		const color = getColor(category);
 
@@ -102,19 +92,10 @@ function drawBoxes(predictions) {
 			y > 20 ? y - 5 : y + 20
 		);
 	});
-
-	// reset ringan agar tidak numpuk
-	for (const key in stableObjects) {
-		stableObjects[key] *= 0.8;
-		if (stableObjects[key] < 0.5) {
-			delete stableObjects[key];
-		}
-	}
 }
 
-
 // ============================
-// 5. DETEKSI REAL-TIME (FPS STABIL)
+// 5. DETEKSI REAL-TIME
 // ============================
 async function detectFrame() {
 	if (!modelReady || detecting) {
@@ -123,23 +104,29 @@ async function detectFrame() {
 	}
 
 	detecting = true;
+
 	const predictions = await model.detect(video);
 	drawBoxes(predictions);
-	detecting = false;
 
-	setTimeout(detectFrame, 100); // ±5 FPS
+	detecting = false;
+	setTimeout(detectFrame, 150); // ±6 FPS (stabil & ringan)
 }
 
 // ============================
-// 6. START SEMUA
+// 6. START
 // ============================
 async function start() {
 	try {
 		await setupCamera();
 		await loadModel();
-		detectFrame();
+
+		// Tunggu video benar-benar tampil
+		video.onplaying = () => {
+			console.log("▶️ Deteksi dimulai");
+			detectFrame();
+		};
 	} catch (err) {
-		alert("❌ Kamera tidak bisa diakses. Pastikan HTTPS & izin kamera aktif.");
+		alert("❌ Kamera tidak bisa diakses. Gunakan HTTPS / localhost.");
 		console.error(err);
 	}
 }
