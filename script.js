@@ -68,23 +68,26 @@ function getColor(category) {
 function drawBoxes(predictions) {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-	const seenKeys = new Set();
-
 	predictions.forEach((pred) => {
 		if (pred.score < 0.4) return;
-
-		if (width < 40 || height < 40) return;
 
 		const category = getCategory(pred.class);
 		if (!category) return;
 
-		const key = `${pred.class}-${Math.round(pred.bbox[0] / 50)}`;
+		const [x, y, width, height] = pred.bbox;
+
+		// filter objek terlalu kecil
+		if (width < 40 || height < 40) return;
+
+		// 🔑 KEY LEBIH STABIL (gabung class + area)
+		const areaKey = Math.round((width * height) / 10000);
+		const key = `${pred.class}-${areaKey}`;
 
 		stableObjects[key] = (stableObjects[key] || 0) + 1;
 
-		if (stableObjects[key] < 2) return;
+		// cukup 1 frame saja (jangan terlalu ketat)
+		if (stableObjects[key] < 1) return;
 
-		const [x, y, width, height] = pred.bbox;
 		const color = getColor(category);
 
 		ctx.strokeStyle = color;
@@ -100,12 +103,15 @@ function drawBoxes(predictions) {
 		);
 	});
 
+	// reset ringan agar tidak numpuk
 	for (const key in stableObjects) {
-		if (!seenKeys.has(key)) {
+		stableObjects[key] *= 0.8;
+		if (stableObjects[key] < 0.5) {
 			delete stableObjects[key];
 		}
 	}
 }
+
 
 // ============================
 // 5. DETEKSI REAL-TIME (FPS STABIL)
