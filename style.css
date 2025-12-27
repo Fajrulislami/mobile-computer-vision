@@ -10,25 +10,14 @@ body {
   font-family: Arial, sans-serif;
 }
 
-video {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: contain;
-  z-index: 1; /* Di bawah canvas */
-}
-
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: contain;
-  z-index: 2; /* Di atas video agar kotak deteksi terlihat */
-  pointer-events: none; /* Opsional: agar klik tembus ke video jika perlu */
+video, canvas {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Mengetengahkan video */
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
 }
 
 .label {
